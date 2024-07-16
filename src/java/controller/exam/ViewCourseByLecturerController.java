@@ -43,7 +43,7 @@ public class ViewCourseByLecturerController extends BaseRequiredLecturerAuthenti
         int lid = lecturer.getId();
         ArrayList<Course> courses = db.getCoursesByLecturer(lid);
         request.setAttribute("courses", courses);
-        request.getRequestDispatcher("../view/course/lecturer.jsp").forward(request, response);
+        request.getRequestDispatcher("../view/exam/lecturer.jsp").forward(request, response);
     } 
 
     /** 

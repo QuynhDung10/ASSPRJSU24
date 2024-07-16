@@ -51,21 +51,28 @@ public class TakeExamController extends BaseRequiredLecturerAuthenticationContro
         
         String[] raw_eids = request.getParameterValues("eid");
         ArrayList<Integer> eids = new ArrayList<>();
+          if (raw_eids != null) {
         for (String raw_eid : raw_eids) {
             eids.add(Integer.parseInt(raw_eid));
         }
-        
+
         ArrayList<Exam> exams = examDB.getExamsByExamIds(eids);
         ArrayList<Grade> grades = graDB.getGradesFromExamIds(eids);
-        
+
         request.setAttribute("students", students);
         request.setAttribute("exams", exams);
-        request.setAttribute("grades",grades);
-        
+        request.setAttribute("grades", grades);
+
         request.getRequestDispatcher("../view/exam/take.jsp").forward(request, response);
-        
-        
-    } 
+    } else {
+        // Nếu không có exam nào được chọn, thông báo lỗi và chuyển hướng trở lại trang trước
+        response.setContentType("text/html;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.println("<h2>Chọn đầu điểm cần nhập!</h2>");
+            out.println("<p><a href=\"javascript:history.back()\">Quay lại</a></p>");
+        }
+          }
+    }
 
     /** 
      * Handles the HTTP <code>POST</code> method.
