@@ -46,7 +46,7 @@ public class LoginController extends HttpServlet {
                 Student student = studentDb.getStudentByUsername(username);
                 if (student != null) {
                     session.setAttribute("student", student);
-                    response.sendRedirect("exam/student");
+                    response.sendRedirect("view/student/home.jsp");
                 } else {
                     response.getWriter().println("User role not recognized.");
                 }

@@ -11,14 +11,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import model.Assessment;
+import model.Course;
 import model.Exam;
 import model.Grade;
 import model.Student;
+import model.Subject;
 
-/**
- *
- * @author sonnt-local
- */
 public class GradeDBContext extends DBContext<Grade> {
 
     public ArrayList<Grade> getGradesFromExamIds(ArrayList<Integer> eids) {
@@ -117,31 +116,186 @@ public class GradeDBContext extends DBContext<Grade> {
         }
         
     }
-public List<Grade> getGradesForStudent(int studentId) throws SQLException {
-        List<Grade> grades = new ArrayList<>();
-        String query = "SELECT g.grade, e.exam_name, e.course_name, e.exam_date " +
-                       "FROM grades g " +
-                       "JOIN exams e ON g.exam_id = e.exam_id " +
-                       "WHERE g.student_id = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            stmt.setInt(1, studentId);
-            ResultSet rs = stmt.executeQuery();
-            
-            while (rs.next()) {
-                float gradeValue = rs.getFloat("grade");
-                String examName = rs.getString("exam_name");
-                String courseName = rs.getString("course_name");
-                // You may retrieve more fields like exam_date if needed
-                
-                
-               
-         
+    
+//     public ArrayList<Grade> getGradeByStudentID(int stdID) {
+//        ArrayList<Grade> grades = new ArrayList<>();
+//
+//        PreparedStatement stm = null;
+//        ResultSet rs = null;
+//        try {
+//            String sql = "SELECT st.sid, st.sname, s.subid, c.cid, c.cname, "
+//                    + "CASE "
+//                    + "    WHEN COUNT(g.score) < (SELECT COUNT(*) FROM assesments a WHERE a.subid = s.subid) "
+//                    + "    THEN 0 "
+//                    + "    ELSE AVG(g.score) "
+//                    + "END AS Average "
+//                    + "FROM students st "
+//                    + "LEFT JOIN students_courses sc ON st.sid = sc.sid "
+//                    + "LEFT JOIN courses c ON sc.cid = c.cid "
+//                    + "LEFT JOIN subjects s ON c.subid = s.subid "
+//                    + "LEFT JOIN exams e ON e.aid IN (SELECT a.aid FROM assesments a WHERE a.subid = s.subid) "
+//                    + "LEFT JOIN grades g ON g.eid = e.eid AND g.sid = st.sid "
+//                    + "WHERE st.sid = ? "
+//                    + "GROUP BY st.sid, st.sname, s.subid, c.cid, c.cname";
+//            stm = connection.prepareStatement(sql);
+//            stm.setInt(1, stdID);
+//            rs = stm.executeQuery();
+//            while (rs.next()) {
+//                Grade g = new Grade();
+//                g.setScore(rs.getFloat("Average"));
+//
+//                Student s = new Student();
+//                s.setId(rs.getInt("sid"));
+//                s.setName(rs.getString("sname"));
+//
+//                Course c = new Course();
+//                c.setId(rs.getInt("cid"));
+//                c.setName(rs.getString("cname"));
+//
+//                ArrayList<Course> courses = new ArrayList<>();
+//                courses.add(c);
+//                s.setCourses(courses);
+//
+//                g.setStudent(s);
+//                grades.add(g);
+//            }
+//        } catch (SQLException ex) {
+//            Logger.getLogger(GradeDBContext.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return grades;
+//    }
+  public ArrayList<Grade> getGradesByStudentID(int stdID) {
+        ArrayList<Grade> grades = new ArrayList<>();
+        String sql = "SELECT g.eid, g.sid, g.score, "
+                   + "e.eid, e.duration, e.[from], "
+                   + "a.aid, a.aname, a.weight, "
+                   + "sub.subid, sub.subname, "
+                   + "c.cid, c.cname "
+                   + "FROM grades g "
+                   + "JOIN exams e ON g.eid = e.eid "
+                   + "JOIN assesments a ON e.aid = a.aid "
+                   + "JOIN subjects sub ON a.subid = sub.subid "
+                   + "JOIN courses c ON sub.subid = c.subid "
+                   + "WHERE g.sid = ?";
+
+        try (PreparedStatement stm = connection.prepareStatement(sql)) {
+            stm.setInt(1, stdID);
+            try (ResultSet rs = stm.executeQuery()) {
+                while (rs.next()) {
+                    Grade g = new Grade();
+                    g.setScore(rs.getFloat("score"));
+
+                    Exam e = new Exam();
+                    e.setId(rs.getInt("eid"));
+                    e.setDuration(rs.getInt("duration"));
+                    e.setFrom(rs.getDate("from"));
+
+                    Assessment a = new Assessment();
+                    a.setId(rs.getInt("aid"));
+                    a.setName(rs.getString("aname"));
+                    a.setWeight(rs.getInt("weight"));
+
+                    e.setAssessment(a);
+                    g.setExam(e);
+
+                    Subject sub = new Subject();
+                    sub.setId(rs.getInt("subid"));
+                    sub.setName(rs.getString("subname"));
+
+                    Course c = new Course();
+                    c.setId(rs.getInt("cid"));
+                    c.setName(rs.getString("cname"));
+                    c.setSubject(sub);
+
+                    g.setCourse(c);
+
+                    grades.add(g);
+                }
             }
+        } catch (SQLException ex) {
+            Logger.getLogger(GradeDBContext.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         return grades;
     }
+
+    public ArrayList<Grade> getGradeByCidAndSid(int courseID, int studentID) {
+        PreparedStatement stm = null;
+        ArrayList<Grade> grades = new ArrayList<>();
+        try {
+            String sql = "SELECT a.aname, a.weight, g.score\n"
+                    + "FROM students st\n"
+                    + "LEFT JOIN students_courses sc ON st.sid = sc.sid\n"
+                    + "LEFT JOIN courses c ON sc.cid = c.cid\n"
+                    + "LEFT JOIN assesments a ON c.subid = a.subid\n"
+                    + "LEFT JOIN exams e ON e.aid = a.aid\n"
+                    + "LEFT JOIN grades g ON g.eid = e.eid AND g.sid = st.sid\n"
+                    + "WHERE st.sid = ? AND c.cid = ?;\n";
+
+            stm = connection.prepareStatement(sql);
+            stm.setInt(1, studentID);
+            stm.setInt(2, courseID);
+            ResultSet rs = stm.executeQuery();
+
+            while (rs.next()) {
+                Grade grade = new Grade();
+                grade.setScore(rs.getFloat("score"));
+
+                Assessment assessment = new Assessment();
+                assessment.setName(rs.getString("aname"));
+                assessment.setWeight(rs.getFloat("weight"));
+
+                Exam exam = new Exam();
+                exam.setAssessment(assessment);
+                grade.setExam(exam);
+
+                grades.add(grade);
+            }
+
+            rs.close();
+            stm.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(GradeDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return grades;
+    }
+    
+    public ArrayList<Grade> getGradesByCourseAndStudent(int courseID, int studentID) {
+    ArrayList<Grade> grades = new ArrayList<>();
+    String sql = "SELECT g.score, a.aname, a.weight "
+               + "FROM grades g "
+               + "JOIN exams e ON g.eid = e.eid "
+               + "JOIN assesments a ON e.aid = a.aid "
+               + "JOIN courses c ON a.subid = c.subid "
+               + "WHERE c.cid = ? AND g.sid = ?";
+
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, courseID);
+        stm.setInt(2, studentID);
+        try (ResultSet rs = stm.executeQuery()) {
+            while (rs.next()) {
+                Grade g = new Grade();
+                g.setScore(rs.getFloat("score"));
+
+                Assessment a = new Assessment();
+                a.setName(rs.getString("aname"));
+                a.setWeight(rs.getFloat("weight"));
+
+                Exam e = new Exam();
+                e.setAssessment(a);
+                g.setExam(e);
+
+                grades.add(g);
+            }
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(GradeDBContext.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return grades;
+}
+
+
     @Override
     public void insert(Grade model) {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
