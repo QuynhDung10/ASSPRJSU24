@@ -1,8 +1,4 @@
-<%-- 
-    Document   : login
-    Created on : Jun 26, 2024, 10:26:35 PM
-    Author     : sonnt-local
---%>
+
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
